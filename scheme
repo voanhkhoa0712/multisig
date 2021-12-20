@@ -1,0 +1,27 @@
+step 0: contruct party of N member
+- generate private polynomial fi of order k - 1
+- the zeroth order ai_0 is the private key
+- from private key -> public key Pi = G * ai_0
+
+step 1: calculate individual challenge
+- find hash L of all member public key
+- each member has private challenge ci = hash(L, Pi)
+- each creates challenge key xi = ai_0 * ci
+
+step 2: distribute secret root
+- person j receives fi(j) from person i
+- person j keep secret root j -> f(j) = sum(fi(j))
+- group private key x = f(0) = sum(xi)
+
+multisig requires min of k members online
+
+step 3: rebuild group private key
+- using secret root to rebuild monomial pi_i of f(0)
+- P = x * G = f(0) * G = sum(pi_i * G)
+
+step 4: generate group signature
+- k member random k private nonce ri -> R = sum(ri)
+- calculate common challenge e = hash(P, R, m)
+- each generate private signature si = ri + e * pi_i
+
+step 5: verify signature G.s = R + P.e

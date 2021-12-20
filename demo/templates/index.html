@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='UTF-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>Multi Signature</title>
+    <style type='text/css'>
+        .container {
+            margin: 10px 0;
+        }
+        .wrap {
+            display: inline-block;
+        }
+        input {
+            width: 600px;
+            display: block;
+            margin-right: 5px;
+            padding-left: 10px;
+        }
+        span {
+            margin-right: 10px;
+            display: inline-block;
+            vertical-align: top;
+            width: 80px;
+        }
+        #online {
+            width: 15px;
+            vertical-align: middle;
+            display: inline-block;
+            margin-right: 0px;
+        }
+        #onlabel {
+            margin-right: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    Hello <strong id='name'></strong> 
+    <label for='online'> 
+        <input type='checkbox' id='online' onclick='handleClick(this);' value='true'>
+        <bdo id='onlabel'> Offline </bdo> 
+    </label>
+    <button id='reset_btn'> Reset </button>
+    <button id='secret_btn'> Secret </button>
+    <button id='nonce_btn'> Nonce </button>
+
+    <p id='error'></p>
+    <div class='container' id='public_key'></div>
+    <div class='container' id='secret_poly'></div>
+    <div class='container' id='secret_pair'></div>
+    <div class='container' id='nonce_pair'></div>
+
+
+    <script src='https://code.jquery.com/jquery-3.5.0.js'></script>
+
+    <script>
+
+        function handleClick(cb) 
+        {
+            let name = $('#name').text()
+
+            $.getJSON('/set_status', {user: name, stat: cb.checked}, function(data, status)
+            {
+                if (data.stat == true) {
+                    if (cb.checked == true) $('#onlabel').text('Online')
+                    if (cb.checked == false) $('#onlabel').text('Offline')
+                }
+            })
+        }
+
+        function makeid(length)
+        {
+            let name = '';
+            let charset = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+            for ( let i = 0; i < length; i++ ) {
+                name += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            return name;
+        }
+
+        function label_poly(length)
+        {
+            let label = []
+            for (let i = 0; i < length; i++) label.push('a' + i)
+            return label
+        }
+
+        function render_param(array, label, where)
+        {
+            $(where).empty()
+            let lspan = document.createElement('span')
+            $(lspan).text(where.substr(1))
+            $(where).append(lspan)
+
+            let parent = document.createElement('div')
+            $(parent).attr('class', 'wrap')
+
+            for (let i = 0; i < array.length; i++) {
+                let child = document.createElement('input')
+                let content = '' + label[i] + ': ' + array[i]
+                $(child).val(content)
+                parent.append(child)
+            }
+
+            $(where).append(parent)
+            $('input').attr('readonly', true);
+        }
+
+        function random_user()
+        {
+            let name = document.getElementById('name')
+            name.innerText = makeid(9)
+
+            $.getJSON('/create_user', {user: name.innerText}, function(data, status)
+            {
+                if (data.stat == false) {
+                    return $('#error').text('Party is full !!!')
+                }
+                else $('#error').text('')
+                
+                let array = [data.pk_x, data.pk_y]
+                let label = ['px', 'py']
+                render_param(array, label, '#public_key')
+
+                label = label_poly(data.poly.length)
+                render_param(data.poly, label, '#secret_poly')
+            })
+        }
+
+        $('#reset_btn').click(function(event)
+        {
+            let name = document.getElementById('name').innerText
+
+            $.getJSON('/remove_user', {user: name}, function(data, status)
+            {
+                $('#public_key').empty()
+                $('#secret_poly').empty()
+                $('#secret_pair').empty()
+                $('#nonce_pair').empty()
+                $('#online').prop('checked', false); 
+                random_user()
+            })
+        });
+
+        $('#secret_btn').click(function(event)
+        {
+            let name = document.getElementById('name').innerText
+
+            $.getJSON('/view_secret', {user: name}, function(data, status)
+            {
+                if (data.stat == false) {
+                    return $('#error').text('Unknown User !!!')
+                }
+                else $('#error').text('')
+                    
+                let array = [data.x_key, data.share]
+                let label = ['sk', 'fx']
+                render_param(array, label, '#secret_pair')
+            })
+        });
+
+        $('#nonce_btn').click(function(event)
+        {
+            let name = document.getElementById('name').innerText
+
+            $.getJSON('/view_nonce', {user: name}, function(data, status)
+            {
+                if (data.stat == false) {
+                    return $('#error').text('Unknown User !!!')
+                }
+                else $('#error').text('')
+
+                let array = [data.s1_k, data.p1_x, data.p1_y]
+                let label = ['s1', 'rx', 'ry']
+                render_param(array, label, '#nonce_pair')
+            })
+        });
+
+        random_user()
+    </script>
+</body>
+</html>
